@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HH3D
 // @namespace    https://github.com/lengocthuc1656-coder
-// @version      3.9
+// @version      4.0
 // @description  PLTLHVBC
 // @match        *://*/*
 // @grant        GM_addStyle
