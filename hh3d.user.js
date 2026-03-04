@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH3D
-// @namespace    https://github.com/yourname
+// @namespace    https://github.com/lengocthuc1656-coder
 // @version      3.7
 // @description  PLTLHVBC
 // @match        *://*/*
@@ -8,8 +8,8 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @run-at       document-end
-// @updateURL    https://raw.githubusercontent.com/yourname/hh3d-script/main/hh3d.user.js
-// @downloadURL  https://raw.githubusercontent.com/yourname/hh3d-script/main/hh3d.user.js
+// @updateURL    https://raw.githubusercontent.com/lengocthuc1656-coder/hh3d-script/main/hh3d.user.js
+// @downloadURL  https://raw.githubusercontent.com/lengocthuc1656-coder/hh3d-script/main/hh3d.user.js
 // ==/UserScript==
 (function() {
 'use strict';
