@@ -1346,21 +1346,24 @@ function startActivityAutoLoop() {
 /* --- fetch + update UI --- */
 async function fetchActivityProgress() {
   try {
-    const res = await fetch(buildUrl("/bang-hoat-dong-ngay"), {
+    const res = await fetch(buildUrl("/nhiem-vu-hang-ngay"), {
       credentials: "include",
       cache: "no-store",
     });
+
     const html = await res.text();
     const doc = new DOMParser().parseFromString(html, "text/html");
-    /* ======  vẽ progress tổng ====== */
-    const fill = doc.querySelector(".reward-progress-fill");
-    if (!fill) return;
-    const percent = fill.style.width || "0%";
+
+    /* ===== progress tổng ===== */
+    const percent =
+      doc.querySelector(".nv-ring-label")?.textContent.trim() || "0%";
+
     const wrap = document.getElementById("reward-progress-wrap");
+
     if (wrap) {
       wrap.innerHTML = `
         <div style="font-size:12px;margin-bottom:4px;color:#ccc;">
-          Hoạt động <span style="float:right;">${percent}</span>
+          Hoạt độneg <span style="float:right;">${percent}</span>
         </div>
         <div style="width:100%;height:6px;background:#2a2a2a;
                     border-radius:999px;overflow:hidden;">
@@ -1372,40 +1375,68 @@ async function fetchActivityProgress() {
         </div>
       `;
     }
- if (!isUIOnlyFetch && percent === "100%") {
-  await autoClaimActivityAll();
-}
-if (isUIOnlyFetch) {
-  isFirstBHDRender = false;
-  isUIOnlyFetch = false; // từ lần sau mới cho auto
-  return;
-}
-const progress = parseBHDProgressFromDoc(doc);
-if (!progress) return;
-if (autoBHDRunning) return;
-autoBHDRunning = true;
+
+    /* ===== auto nhận thưởng ===== */
+    if (!isUIOnlyFetch && percent === "100%") {
+      await autoClaimActivityAll();
+    }
+
+    if (isUIOnlyFetch) {
+      isFirstBHDRender = false;
+      isUIOnlyFetch = false;
+      return;
+    }
+
+    /* ===== parse nhiệm vụ ===== */
+    const progress = {};
+
+    doc.querySelectorAll(".nv-quest").forEach(q => {
+      const name = q.querySelector("h4")?.innerText.trim();
+      const prog = q.querySelector(".nv-prog-txt")?.innerText.trim();
+
+      if (!name || !prog) return;
+
+      const match = prog.match(/(\d+)\s*\/\s*(\d+)/);
+      if (!match) return;
+
+      const cur = parseInt(match[1]);
+      const max = parseInt(match[2]);
+
+      progress[name] = max > 0 ? Math.round((cur / max) * 100) : 0;
+    });
+
+    if (autoBHDRunning) return;
+
+    autoBHDRunning = true;
+
     try {
-      const diemDanh = progress["Điểm danh"] || 0;
+      const diemDanh = progress["Điểm Danh"] || progress["Điểm danh"] || 0;
       const vanDap = progress["Vấn Đáp"] || 0;
       const luanVo = progress["Luận Võ"] || 0;
-      //  Nếu Điểm danh / Vấn Đáp chưa xong → chạy chuỗi
+
+      /* ===== Điểm danh + Vấn đáp ===== */
       if (diemDanh < 100 || vanDap < 100) {
+
         if (typeof dailyCheckIn === "function") {
           await dailyCheckIn();
           await new Promise(r => setTimeout(r, 800));
         }
+
         if (typeof doTeLe === "function") {
           await doTeLe();
           await new Promise(r => setTimeout(r, 800));
         }
+
         if (typeof autoQuiz === "function") {
           await autoQuiz();
           await new Promise(r => setTimeout(r, 1500));
         }
       }
-      // Sau khi xong Vấn Đáp →  chạy Luận Võ
+
+      /* ===== Luận Võ ===== */
       if (luanVo < 100) {
         console.log("⚔️ Auto BHD: Chạy Luận Võ");
+
         if (typeof runLuanVoAuto === "function") {
           await runLuanVoAuto();
         }
@@ -1414,11 +1445,11 @@ autoBHDRunning = true;
     } finally {
       autoBHDRunning = false;
     }
+
   } catch (e) {
     console.error("[ACTIVITY]", e);
   }
 }
-
 /* --- auto nhận thưởng --- */
 async function autoClaimActivityAll() {
   const today = new Date().toDateString();
@@ -1699,7 +1730,6 @@ async function fetchWeddingRooms() {
     action: "show_all_wedding",
     security_token: securityToken
   });
-
   return r.ok ? r.data?.data || [] : null;
 }
 // ================== HELPER ==================
@@ -1739,8 +1769,6 @@ function showApiMessage(prefix, id, apiRes) {
     );
   }
 }
-
-
 // ================== ACTION ==================
 async function sendBlessing(id) {
   const msg = "🌌 Định mệnh an bài, chúc hai vị đạo hữu bách niên hảo hợp!";
@@ -1797,7 +1825,6 @@ function parseWeddingRooms(rooms) {
 
   return { blessList, giftList };
 }
-
 // ================== MAIN AUTO ==================
 async function runWeddingAuto() {
   try {
@@ -1855,6 +1882,7 @@ if (btnWedding) {
   btnWedding.addEventListener("click", runWeddingAuto);
 }
 function autoChucPhucScheduler() {
+      
   const now = nowMinutes();
   AUTO_CHUC_PHUC_WINDOWS.forEach(w => {
     const runKey = `HH3D_${w.key}`;
@@ -1913,6 +1941,7 @@ let currentTarget = null;
 async function fetchLvPageInfo() {
   const url = "/luan-vo-duong?t=" + Date.now();
   const resp = await fetch(url, {
+        
     credentials: "include",
     cache: "no-store"
   });
@@ -1969,6 +1998,7 @@ let LV_NEED_JOIN = false;
     showToast("✅ Đã gia nhập Luận Võ");
     return true;
   }
+          
   showToast("⚠️ Không join được Luận Võ");
   return false;
 }
