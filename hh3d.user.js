@@ -8,6 +8,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
+// @connect      api.github.com
 // @connect      raw.githubusercontent.com
 // @updateURL    https://raw.githubusercontent.com/hoathinh3d173820-coder/hh3d-script/main/hh3d.user.js
 // @downloadURL  https://raw.githubusercontent.com/hoathinh3d173820-coder/hh3d-script/main/hh3d.user.js
@@ -6079,7 +6080,7 @@ const CURRENT_VERSION = GM_info.script.version;
 const VERSION_URL =
 "https://raw.githubusercontent.com/hoathinh3d173820-coder/hh3d-script/main/version.json?t=" + Date.now();
 
-      
+
 const SCRIPT_URL =
 "https://raw.githubusercontent.com/hoathinh3d173820-coder/hh3d-script/main/hh3d.user.js";
 
@@ -6138,7 +6139,7 @@ function showToast(message, showButton = false) {
     setTimeout(() => {
         toast.remove();
 
-        
+
     }, 20000);
 }
 window.addEventListener("load", () => {
@@ -6284,6 +6285,227 @@ row.dataset.tuviInjected=true;
 getMyTuvi();
 loadData();
 setInterval(inject,1000);
+"use strict";
+
+const TOKEN="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";
+const OWNER="hoathinh3d173820-coder";
+const REPO="tuvi-data";
+const FILE="data.json";
+const CLAN_URL="/danh-sach-thanh-vien-tong-mon";
+
+const COOLDOWN=5*60*1000;
+const LAST_UPDATE_KEY="tuvi_last_update";
+
+// ===== COOLDOWN =====
+function canRun(){
+
+const last=localStorage.getItem(LAST_UPDATE_KEY);
+
+if(!last) return true;
+
+const diff=Date.now()-parseInt(last);
+
+if(diff<COOLDOWN){
+
+console.log("⏳ Cooldown:",Math.round((COOLDOWN-diff)/1000),"giây");
+
+return false;
+
+}
+
+return true;
+
+}
+
+// ===== LẤY TU VI =====
+function getTuviData(doc){
+
+const data={};
+
+const rows=doc.querySelectorAll("tr[data-id]");
+
+console.log("Tìm thấy thành viên:",rows.length);
+
+rows.forEach(row=>{
+
+const id=row.getAttribute("data-id");
+
+const tuviEl=row.querySelector(".display-show-red b");
+
+if(!tuviEl) return;
+
+const tuvi=parseInt(tuviEl.innerText.replace(/\D/g,""));
+
+data[id]=tuvi;
+
+});
+
+return data;
+
+}
+
+
+// ===== UPDATE GITHUB =====
+function updateGithub(newData){
+
+const url=`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`;
+
+GM_xmlhttpRequest({
+
+method:"GET",
+url:url,
+
+headers:{
+"Authorization":"token "+TOKEN
+},
+
+onload:function(res){
+
+let sha=null;
+let oldData={};
+
+try{
+
+if(res.status===200){
+
+const file=JSON.parse(res.responseText);
+
+sha=file.sha;
+
+oldData=JSON.parse(
+atob(file.content.replace(/\n/g,""))
+);
+
+console.log("📦 Data cũ:",oldData);
+
+}else if(res.status===404){
+
+console.log("📁 File chưa tồn tại -> sẽ tạo mới");
+
+}
+
+}catch(e){
+
+console.log("⚠ Lỗi đọc file GitHub");
+
+}
+
+const merged={...oldData};
+let changed=false;
+
+// ===== UPDATE MEMBER =====
+Object.keys(newData).forEach(id=>{
+
+if(!oldData[id] || oldData[id]!==newData[id]){
+
+merged[id]=newData[id];
+changed=true;
+
+}
+
+});
+
+
+
+if(!changed){
+
+console.log("⚡ Không có thay đổi");
+
+return;
+
+}
+
+console.log("📊 Có thay đổi -> update GitHub");
+
+
+const content=btoa(
+unescape(
+encodeURIComponent(
+JSON.stringify(merged,null,2)
+)
+)
+);
+
+const body={
+message:"auto update tuvi",
+content:content
+};
+
+if(sha) body.sha=sha;
+
+GM_xmlhttpRequest({
+
+method:"PUT",
+url:url,
+
+headers:{
+"Authorization":"token "+TOKEN,
+"Content-Type":"application/json"
+},
+
+data:JSON.stringify(body),
+
+onload:function(){
+
+console.log("✅ Update GitHub thành công");
+
+localStorage.setItem(LAST_UPDATE_KEY,Date.now());
+
+},
+
+onerror:function(){
+
+console.log("❌ Lỗi update GitHub");
+
+}
+
+});
+
+}
+
+});
+
+}
+
+
+// ===== FETCH TRANG TÔNG =====
+function fetchClanPage(){
+
+console.log("🚀 Fetch trang tông môn...");
+
+fetch(CLAN_URL)
+
+.then(r=>r.text())
+
+.then(html=>{
+
+const parser=new DOMParser();
+
+const doc=parser.parseFromString(html,"text/html");
+
+const data=getTuviData(doc);
+
+updateGithub(data);
+
+});
+
+}
+
+
+// ===== CHECK PAGE =====
+function checkPage(){
+
+if(location.href.includes("danh-sach-thanh-vien-tong-mon")){
+
+if(!canRun()) return;
+
+setTimeout(fetchClanPage,2000);
+
+}
+
+}
+
+checkPage();
 
 })();
 })();
