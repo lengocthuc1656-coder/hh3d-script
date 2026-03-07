@@ -8,6 +8,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
+// @connect      api.github.com
 // @connect      raw.githubusercontent.com
 // @updateURL    https://raw.githubusercontent.com/hoathinh3d173820-coder/hh3d-script/main/hh3d.user.js
 // @downloadURL  https://raw.githubusercontent.com/hoathinh3d173820-coder/hh3d-script/main/hh3d.user.js
@@ -6145,76 +6146,302 @@ window.addEventListener("load", () => {
     setTimeout(checkUpdate, 3000);
 
 });
-      (function(){
+(function(){
+
 const DATA_URL="https://raw.githubusercontent.com/hoathinh3d173820-coder/tuvi-data/main/data.json";
+
 let TUVI_DATA={};
+let MY_TUVI=0;
+
+
+// ===== LẤY TU VI BẢN THÂN =====
+function getMyTuvi(){
+
+const el=document.querySelector("#head_manage_acc");
+
+if(!el) return;
+
+const txt=el.innerText;
+
+const num=txt.replace(/\D/g,"");
+
+MY_TUVI=parseInt(num);
+
+console.log("Tu Vi bản thân:",MY_TUVI);
+
+}
+
+
 // ===== LOAD DATA =====
 function loadData(){
- GM_xmlhttpRequest({
-  method:"GET",
-  url:DATA_URL,
-  onload:function(res){
-   try{
-    TUVI_DATA = JSON.parse(res.responseText);
-   }catch(e){
-    console.log("Lỗi đọc data.json");
-   }
-  }
 
-            
- });
+GM_xmlhttpRequest({
+
+method:"GET",
+url:DATA_URL,
+
+onload:function(res){
+
+try{
+
+TUVI_DATA = JSON.parse(res.responseText);
+
+}catch(e){
+
+console.log("Lỗi đọc data.json");
+
 }
+
+}
+
+});
+
+}
+
+
+// ===== TÍNH TỈ LỆ THẮNG =====
+function calcWinRate(enemy){
+
+if(!MY_TUVI || !enemy) return 0;
+
+const diff = MY_TUVI - enemy;
+const ratio = MY_TUVI / enemy;
+
+let per = 0.3;
+
+// hệ số theo ratio
+if(ratio >= 8) per = 1;
+else if(ratio >= 7) per = 0.9;
+else if(ratio >= 6) per = 0.8;
+else if(ratio >= 5) per = 0.7;
+else if(ratio >= 4) per = 0.6;
+else if(ratio >= 3) per = 0.5;
+else if(ratio >= 2) per = 0.4;
+
+// % thay đổi
+const bonus = (diff / 1000) * per;
+
+// tỉ lệ thắng
+const rate = 50 + bonus;
+
+return Math.round(rate);
+}
+
 // ===== LẤY UID =====
 function getUserId(img){
- const m = img.src.match(/ultimatemember\/(\d+)\//);
- return m ? m[1] : null;
+
+const m = img.src.match(/ultimatemember\/(\d+)\//);
+
+return m ? m[1] : null;
+
 }
+
+
 // ===== CHÈN TU VI =====
 function inject(){
 
- document.querySelectorAll(".user-row").forEach(row=>{
+document.querySelectorAll(".user-row").forEach(row=>{
 
-  if(row.dataset.tuviInjected) return;
+if(row.dataset.tuviInjected) return;
 
-  const img=row.querySelector(".avatar-50px");
-  if(!img) return;
+const img=row.querySelector(".avatar-50px");
 
-  const uid=getUserId(img);
-  if(!uid) return;
+if(!img) return;
 
-  const tuvi=TUVI_DATA[uid];
-  if(!tuvi) return;
+const uid=getUserId(img);
 
-  const name=row.querySelector(".user-name");
-  if(!name) return;
+if(!uid) return;
 
-  const div=document.createElement("div");
+const tuvi=TUVI_DATA[uid];
 
-  div.className="tuvi-show";
-  div.style.color="red";
-  div.style.fontWeight="bold";
-  div.style.fontSize="13px";
+if(!tuvi) return;
 
-  div.innerText="Tu Vi: "+Number(tuvi).toLocaleString();
+const name=row.querySelector(".user-name");
 
-  name.after(div);
+if(!name) return;
 
-  row.dataset.tuviInjected=true;
 
- });
+const rate = calcWinRate(tuvi);
+
+
+const div=document.createElement("div");
+
+div.className="tuvi-show";
+
+div.style.fontWeight="bold";
+
+div.style.fontSize="13px";
+
+div.style.color = rate>50 ? "blue" : "red";
+
+div.innerText="✨ "+Number(tuvi).toLocaleString()+" ("+rate+"%)";
+
+name.after(div);
+row.dataset.tuviInjected=true;
+});
+
+}
+// ===== RUN =====
+getMyTuvi();
+loadData();
+setInterval(inject,1000);
+"use strict";
+
+const TOKEN="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";
+const OWNER="hoathinh3d173820-coder";
+const REPO="tuvi-data";
+const FILE="data.json";
+
+const CLAN_URL="/danh-sach-thanh-vien-tong-mon";
+
+const COOLDOWN=5*60*1000;
+const LAST_UPDATE_KEY="tuvi_last_update";
+
+
+// ===== COOLDOWN =====
+
+function canRun(){
+
+const last=localStorage.getItem(LAST_UPDATE_KEY);
+
+if(!last) return true;
+
+const diff=Date.now()-parseInt(last);
+
+if(diff<COOLDOWN){
+
+console.log("⏳ Cooldown:",Math.round((COOLDOWN-diff)/1000),"giây");
+
+return false;
 
 }
 
-          
-// ===== RUN =====
+return true;
 
-loadData();
+}
 
-       
-setInterval(inject,1000);
+// ===== LẤY TU VI =====
+
+function getTuviData(doc){
+
+const data={};
+
+const rows=doc.querySelectorAll("tr[data-id]");
+
+console.log("Tìm thấy thành viên:",rows.length);
+
+rows.forEach(row=>{
+
+const id=row.getAttribute("data-id");
+
+const tuviEl=row.querySelector(".display-show-red b");
+
+if(!tuviEl) return;
+
+const tuvi=parseInt(tuviEl.innerText.replace(/\D/g,""));
+
+data[id]=tuvi;
+
+});
+
+return data;
+
+}
 
 
-      
+// ===== UPDATE GITHUB =====
+function updateGithub(newData){
+const url=`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`;
+GM_xmlhttpRequest({
+method:"GET",
+url:url,
+headers:{
+"Authorization":"token "+TOKEN
+},
+
+onload:function(res){
+let sha=null;
+let oldData={};
+try{
+const file=JSON.parse(res.responseText);
+sha=file.sha;
+
+oldData=JSON.parse(
+atob(file.content.replace(/\n/g,""))
+);
+
+}catch(e){
+console.log("File chưa tồn tại");
+
+}
+const merged={...oldData};
+let changed=false;
+// ===== UPDATE MEMBER =====
+Object.keys(newData).forEach(id=>{
+if(!oldData[id]||oldData[id]!==newData[id]){
+merged[id]=newData[id];
+changed=true;
+}
+});
+// ===== XOÁ MEMBER RỜI TÔNG =====
+Object.keys(oldData).forEach(id=>{
+if(!newData[id]){
+delete merged[id];
+changed=true;
+}
+});
+if(!changed){
+console.log("⚡ Không có thay đổi");
+return;
+}
+console.log("📊 Có thay đổi -> update");
+const content=btoa(
+unescape(
+encodeURIComponent(
+JSON.stringify(merged,null,2)
+)
+)
+);
+const body={
+message:"auto update tuvi",
+content:content
+};
+if(sha) body.sha=sha;
+GM_xmlhttpRequest({
+method:"PUT",
+url:url,
+headers:{
+"Authorization":"token "+TOKEN,
+"Content-Type":"application/json"
+},
+data:JSON.stringify(body),
+onload:function(){
+localStorage.setItem(LAST_UPDATE_KEY,Date.now());
+
+},
+onerror:function(){
+console.log("❌ Lỗi update GitHub");
+}
+});
+}
+});}
+// ===== FETCH TRANG TÔNG =====
+function fetchClanPage(){
+fetch(CLAN_URL).then(r=>r.text()).then(html=>{
+const parser=new DOMParser();
+const doc=parser.parseFromString(html,"text/html");
+const data=getTuviData(doc);
+updateGithub(data);
+});
+}
+// ===== CHECK PAGE =====
+function checkPage(){
+if(location.href.includes("khoang-mach")){
+if(!canRun()) return;
+setTimeout(fetchClanPage,2000);
+}}
+checkPage();
+
 })();
 })();
 })();
