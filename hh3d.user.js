@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HH3D
 // @namespace    https://github.com/hoathinh3d173820-coder
-// @version      4.8
+// @version      4.9
 // @description  Script HH3D
 // @match        *://*/*
 // @grant        GM_addStyle
@@ -73,7 +73,6 @@ style="flex:1 1 48%;background:linear-gradient(180deg,#7b1fa2,#4a148c);border:1p
 style="flex:1 1 48%;background:linear-gradient(180deg,#333,#1f1f1f);border:1px solid #444;border-radius:8px;color:#ddd;padding:6px 0;cursor:pointer">
 ✖ Đóng
 </button>
-
 </div>
 `;
 
@@ -122,7 +121,8 @@ function showToast(msg, preview = true, duration = 3000) {
   if (typeof preview === "number") {
     duration = preview;
     preview = true;
-  }
+ 
+}
 TOAST_HISTORY.push({
   msg,
   preview,
@@ -169,6 +169,7 @@ GM_addStyle(`
 #autoMenu{
   transition: transform .4s ease;
 }
+
 #autoMenu{cursor:move;position:fixed;top:80px;right:10px;background:#222;border:1px solid #555;border-radius:8px;padding:10px;color:#fff;font-size:14px;z-index:99999}
 #autoMenu label{display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin:4px 0;width:100%;box-sizing:border-box}
 .switch{flex-shrink:0;position:relative;display:inline-block;width:50px;height:24px}
@@ -195,6 +196,7 @@ document.body.appendChild(menu);
 async function openSettingsPopup() {
   if (document.getElementById("hh3d-setting-popup")) return;
 const raw = await GM_getValue(STORAGE_KEY, null);
+      
 let saved;
 if (!raw || !Array.isArray(raw.accounts)) {
   saved = {
@@ -252,6 +254,7 @@ function renderList() {
       </div>`;
     return;
   }
+      
   saved.accounts.forEach(acc => {
     const item = document.createElement("div");
     const isActive = acc.id === saved.activeId;
@@ -304,6 +307,7 @@ function renderList() {
       username,
       password
     };
+          
     saved.accounts.push(newAcc);
     saved.activeId = newAcc.id;
     await GM_setValue(STORAGE_KEY, saved);
@@ -349,6 +353,7 @@ async function logoutViaIframe() {
 
     const iframe = document.createElement("iframe");
 
+        
 iframe.style.cssText = `
   position:fixed;
   bottom:0;
@@ -404,6 +409,7 @@ async function autoLogin() {
     activeId: null
   });
 
+      
   if (!saved.activeId) return;
 
   const activeAcc = saved.accounts.find(a => a.id === saved.activeId);
@@ -449,7 +455,7 @@ const loginInterval = setInterval(() => {
     console.log("stop interval");
     clearInterval(loginInterval);
   }
-}, 2500);
+}, 7500);
     function autoScaleMenu() {
   const rect = menu.getBoundingClientRect();
   const availableHeight = window.innerHeight - 80; // trừ top 60 + margin
@@ -487,6 +493,7 @@ popup.style.cssText = `
   z-index:999999;min-width:300px;display:none;box-shadow:0 0 20px rgba(0,0,0,.6);
   color:#fff;font-family:Segoe UI, sans-serif;
 `;
+
 popup.innerHTML = `
   <div style="font-weight:700;margin-bottom:8px;text-align:center">💊 Mua Đan Dược</div>
 
@@ -511,6 +518,7 @@ popup.innerHTML = `
         <button data-src="tubao" data-item="item_1748710720801">Đan Dược Thánh Phẩm (2)(+4360 Tu Vi)</button>
     </div>
   </div>
+  
   <div style="text-align:center;margin-top:10px">
     <button id="closeBuyDanPopup" style="background:#333;border:1px solid #444;color:#fff;padding:6px 12px;border-radius:8px;cursor:pointer">Đóng</button>
   </div>
@@ -556,6 +564,7 @@ function ensureTuBaoAjaxShop(timeoutMs = 15000) {
     const start = Date.now();
     const timer = setInterval(() => {
       try {
+        
         const win = iframe.contentWindow;
         const ajaxShop = win?.Ajax_Shop;
         if (ajaxShop?.nonce && ajaxShop?.ajaxurl) {
@@ -636,6 +645,7 @@ const menuMax = {
   HoangVuc: 5,
   BiCanh: 5
 };
+      
 function getMenuData(){
   return JSON.parse(localStorage.getItem("AUTO_MENU_COUNT") || "{}");
 }
@@ -675,6 +685,7 @@ function renderMenuCount(key){
 function renderAllMenu(){
   Object.keys(menuMax).forEach(renderMenuCount);
 }
+      
 // == RESET QUA NGÀY =
 (function autoResetByDay(){
   const today = new Date().toDateString();
@@ -823,6 +834,7 @@ function applyMenuState(state,instant=false){
   }
   localStorage.setItem("menuCollapsed",collapsed?"1":"0");
 }
+      
 applyMenuState(savedState, true);
 menu.appendChild(collapseBtn);
 collapseBtn.onclick = () => { applyMenuState(!collapsed);};
@@ -1110,6 +1122,7 @@ async function updateProfileInfo() {
   const statsHtml = [...document.querySelectorAll("#head_manage_acc div")].map(
     (e) => e.outerHTML
   );
+      
   const tuvi = statsHtml.find((t) => t.includes("Tu Vi")) || `<div>✨ Tu Vi: ?</div>`;
   const thach =
     statsHtml.find((t) => t.includes("Tinh Thạch")) || `<div>💎 Tinh Thạch: ?</div>`;
@@ -4119,6 +4132,7 @@ attackBtn.onclick = () => {
       ? "⚔ Bật auto đánh địch trong mỏ": "⛔ Tắt auto đánh"
   );
 };
+        
 // ================== STYLE ==================
 GM_addStyle(`
 #autoKhoangPopup{position:fixed;inset:0;z-index:99999;font-family:system-ui}
@@ -4189,6 +4203,7 @@ bonusSelect.value = savedBonus;
 bonusSelect.onchange = e => {
   localStorage.setItem(STORAGE_BONUS_MIN, e.target.value);
 };
+
 // ===== MINE LIST =====
 const mineList = popup.querySelector("#akMineList");
 // ===== TAB CLICK =====
@@ -4254,6 +4269,7 @@ if (saved?.id) {
   akLog("Đã load mỏ đã lưu");
 }
 }
+                                                       
 function renderBadEnemyList() {
   const box = document.getElementById("akBadList");
   if (!box) return;
@@ -4300,6 +4316,7 @@ function addBadEnemy(id) {
     akLog(`🚫 Đã thêm vào danh sách né: ${id}`);
   }
 }
+          
 function removeBadEnemy(id) {
   id = String(id);
   const list = getBadEnemies().filter(x => String(x) !== id);
@@ -4352,6 +4369,7 @@ const enemies = info.users.filter(
     u.lien_minh === false &&
     u.dong_mon === false
 );
+         
 if (abortCombat || !AK.enableAttack || !AK.running) {
   akLog("⛔ Đã tắt auto đánh → bỏ qua combat vòng này");
   gotoNextLoop();
@@ -4387,6 +4405,7 @@ while (AK.running) {
     stopAuto();
     return;
   }
+       
   // 🚫 HẾT LƯỢT ĐÁNH
   if (
     atk?.success === false &&
@@ -4574,6 +4593,7 @@ else {
   };
   loop();
 }
+      
 function stopAuto() {
   AK.running = false;
   clearTimeout(AK.timer);
@@ -4685,6 +4705,7 @@ else {
         stopAutoThiLuyen("❌ Không lấy được token sau khi mở");
         return;
       }
+                          
       const nextRes = await thiLuyenAjax(
         "get_remaining_time_tltm",
         nextToken
@@ -4820,6 +4841,7 @@ function showAttackResult(result) {
     let msg = "🎯 " + parts.join(" | ");
     showToast(msg, 5000);
 }
+        
 let autoBiCanhTimer = null;
 async function autoBiCanh() {
     try {
@@ -4970,6 +4992,7 @@ async function getFriendsList() {
         if (Array.isArray(data)) {
             return data;
         }
+                  
         if (data.success && Array.isArray(data.data)) {
             return data.data;
         }
@@ -5097,6 +5120,7 @@ function showPopup(contentHtml){
     justify-content:center;
     z-index:999999;
   `;
+        
   const box = document.createElement("div");
   box.style.cssText = `
     position:relative;
@@ -5231,6 +5255,7 @@ async function getBHDProgress(){
       box-shadow:0 10px 28px rgba(0,0,0,.45);
       font-size:12px;
     ">
+      
       <div style="font-size:15px;font-weight:700;margin-bottom:8px;">
         📊 Tiến Độ Ngày (${totalPercent})
       </div>
@@ -5360,6 +5385,7 @@ toggleHV.onchange=()=>{const on=toggleHV.checked;localStorage.setItem("hoangvucT
     const s = document.getElementById(STYLE_ID);
     if (s) s.remove();
   }
+ 
 function ensureButton() {
   const modal = document.querySelector(".modal-content");
   if (!modal) return;
@@ -5442,6 +5468,7 @@ if (mMine?.[1]) {
     }
     KM_SEC.lastScan = Date.now();
   }
+        
   async function getSecurityBundle() {
     if (!KM_SEC.attack_security || !KM_SEC.token || Date.now() - KM_SEC.lastScan > 5 * 60 * 1000) {
       scanSecurityFromDOM();
@@ -5512,6 +5539,7 @@ if (mMine?.[1]) {
     console.warn("[KM] Lỗi refresh mỏ:", e);
   }
 }
+ 
   //  HÀM ĐÁNH
 async function attackUserInMine(attackToken, mineId) {
   const { security, token } = await getSecurityBundle();
@@ -5606,6 +5634,7 @@ function createFastAttackBtn(row) {
       btn.innerHTML = "❌";
     }
 
+      
     setTimeout(() => {
       btn.innerHTML = old;
       delete btn.dataset.loading;
@@ -5664,6 +5693,7 @@ function createFastAttackBtn(row) {
       btn.style.pointerEvents = "auto";
     }
   };
+ 
   if (!document.getElementById("ak-spin-style")) {
     const style = document.createElement("style");
     style.id = "ak-spin-style";
@@ -5744,6 +5774,7 @@ const enemies = users
       u.dong_mon === "0";
     return lienMinh && dongMon;
   })
+  
   .map(u => {
     // LẤY TÊN TÔNG
     let tongName = "";
@@ -5854,6 +5885,7 @@ function showEnemyPopup(list) {
       background:#1c1c1c;border-radius:8px;
       cursor:pointer;transition:0.2s;
     `;
+          
 row.innerHTML = `
   <div style="color:#888;font-size:12px;width:25px">
     ${index + 1}
@@ -5967,6 +5999,7 @@ if (selectedIds.length >= 2) {
     this._url = url;
     return originalOpen.apply(this, arguments);
   };
+                     
   XMLHttpRequest.prototype.send = function(body) {
     this.addEventListener("load", function() {
       try {
@@ -6046,6 +6079,7 @@ const CURRENT_VERSION = GM_info.script.version;
 const VERSION_URL =
 "https://raw.githubusercontent.com/hoathinh3d173820-coder/hh3d-script/main/version.json?t=" + Date.now();
 
+      
 const SCRIPT_URL =
 "https://raw.githubusercontent.com/hoathinh3d173820-coder/hh3d-script/main/hh3d.user.js";
 
@@ -6104,6 +6138,7 @@ function showToast(message, showButton = false) {
     setTimeout(() => {
         toast.remove();
 
+        
     }, 20000);
 }
 window.addEventListener("load", () => {
@@ -6126,6 +6161,7 @@ function loadData(){
    }
   }
 
+            
  });
 }
 // ===== LẤY UID =====
@@ -6169,12 +6205,16 @@ function inject(){
 
 }
 
+          
 // ===== RUN =====
 
 loadData();
 
+       
 setInterval(inject,1000);
 
+
+      
 })();
 })();
 })();
