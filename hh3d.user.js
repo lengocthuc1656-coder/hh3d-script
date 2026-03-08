@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HH3D
 // @namespace    https://github.com/hoathinh3d173820-coder
-// @version      5.1
+// @version      5.2
 // @description  Script HH3D
 // @match        *://*/*
 // @grant        GM_addStyle
@@ -1835,19 +1835,55 @@ function showApiMessage(prefix, id, apiRes) {
 
 
 // ================== ACTION ==================
-async function sendBlessing(id) {
-  const msg = "🌌 Định mệnh an bài, chúc hai vị đạo hữu bách niên hảo hợp!";
+async function sendBlessing(id, type) {
 
-  const res = await callApi({
-    action: "hh3d_add_blessing",
-    wedding_room_id: id,
-    message: msg
-  });
+  const msgDaoLu =
+    "🌌 Định mệnh an bài, chúc hai vị đạo hữu bách niên hảo hợp!";
 
-  // 👉 CHỈ HIỆN MESSAGE
-  showApiMessage("💌 Chúc phúc", id, res?.data);
+  const msgHongNhan =
+    "🌸 Hồng trần hữu duyên, tri kỷ tương phùng! Chúc mừng một đoạn hồng duyên đẹp giữa chốn tu chân. ✨";
+
+  const nonce = localStorage.getItem("HH3D_NONCE_WP");
+
+  let res;
+
+  // ===== HỒNG NHAN =====
+  if (type === "hong_nhan") {
+
+    res = await fetch(buildUrl("/wp-json/hh3d/v1/hong-nhan/bless"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(nonce ? { "X-WP-Nonce": nonce } : {})
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        wedding_room_id: id,
+        message: msgHongNhan
+      })
+    });
+
+  }
+
+  // ===== ĐẠO LỮ =====
+  else {
+
+    const r = await callApi({
+      action: "hh3d_add_blessing",
+      wedding_room_id: id,
+      message: msgDaoLu
+    });
+
+    showApiMessage("💌 Chúc phúc", id, r?.data);
+    return;
+  }
+
+  let data;
+  try { data = await res.json(); }
+  catch { data = await res.text(); }
+
+  showApiMessage("💌 Chúc phúc", id, data);
 }
-
 async function openLiXi(id) {
   const res = await callApi({
     action: "hh3d_receive_li_xi",
@@ -1860,37 +1896,39 @@ async function openLiXi(id) {
 
 // ================== PARSE PHÒNG CƯỚI (CHUẨN THEO BACKEND) ==================
 function parseWeddingRooms(rooms) {
+
   const blessList = [];
   const giftList = [];
 
   for (const r of rooms) {
+
     const id = Number(r.wedding_room_id);
     if (!id) continue;
+
+    const type = r.room_type || "dao_lu";
 
     const hasBlessed = toBool(r.has_blessed);
     const hasLiXi = toBool(r.has_li_xi);
 
-    // ===== DEBUG LOG =====
     console.log("[WEDDING]", id, {
+      type,
       hasBlessed,
-      hasLiXi,
-      has_sent_li_xi: r.has_sent_li_xi
+      hasLiXi
     });
 
-    // ✅ CHƯA CHÚC → CHÚC
+    // ===== CHƯA CHÚC =====
     if (!hasBlessed) {
-      blessList.push(id);
+      blessList.push({ id, type });
     }
 
-    // ✅ CÓ LÌ XÌ (true = đang có, cần mở)
-    if (hasLiXi) {
-      giftList.push(id);
+    // ===== LÌ XÌ CHỈ CÓ Ở ĐẠO LỮ =====
+    if (type === "dao_lu" && hasLiXi) {
+      giftList.push({ id, type });
     }
   }
 
   return { blessList, giftList };
 }
-
 // ================== MAIN AUTO ==================
 async function runWeddingAuto() {
   try {
@@ -1923,17 +1961,16 @@ async function runWeddingAuto() {
       "info"
     );
     // 5️⃣ CHÚC PHÚC
-    for (const id of blessList) {
-      showToast(`💌 Đang chúc phòng ${id}`, "info");
-      await sendBlessing(id);
-      await wait(1500);
-    }
-    // 6️⃣ MỞ LÌ XÌ
-    for (const id of giftList) {
-      showToast(`🧧 Đang mở lì xì phòng ${id}`, "info");
-      await openLiXi(id);
-      await wait(1500);
-    }
+for (const r of blessList) {
+  showToast(`💌 Đang chúc phòng ${r.id}`, "info");
+  await sendBlessing(r.id, r.type);
+  await wait(300);
+}
+ for (const r of giftList) {
+  showToast(`🧧 Đang mở lì xì phòng ${r.id}`, "info");
+  await openLiXi(r.id);
+  await wait(300);
+}
       weddingRetryCount = 0;
     showToast("✅ Hoàn tất Tiên Duyên", "success");
   } catch (e) {
@@ -1978,6 +2015,7 @@ function autoChucPhucScheduler() {
   });
 }
 setInterval(autoChucPhucScheduler, 30_000); // check mỗi 30s
+      
 // ========== LUẬN VÕ  – FULL ) ==========
 const LV_BASE = buildUrl("/wp-json/luan-vo/v1");
     let LV_RUNNING = false;
@@ -4522,6 +4560,7 @@ if (curInMine) {
 
   // ===== NẰM TRONG VÙNG 30-80% =====
   if (
+        
     AK.enableTakeover &&
     bonusNow >= TAKE_MIN &&
     bonusNow <= TAKE_MAX
@@ -4576,6 +4615,7 @@ else {
     enterMine,
     [AK.selectedMineId]
   );
+      
   // enterMine đã tự log → chỉ xử lý case đặc biệt
   if (!enter?.success) {
     const msg = enter?.message || enter?.data?.message || "";
@@ -4656,6 +4696,7 @@ async function autoThiLuyenSilent() {
       stopAutoThiLuyen("❌ Không lấy được security token");
       return;
     }
+      
     /* == CHECK THỜI GIAN == */
     const timeRes = await thiLuyenAjax(
       "get_remaining_time_tltm",
@@ -4754,6 +4795,7 @@ Headers.prototype.set = function(name, value) {
             },
             credentials: "include"
         });
+      
         const raw = await resp.text();
         try { return JSON.parse(raw); } catch { return { success: false, message: raw }; }
     }
@@ -4825,6 +4867,7 @@ let resp = await fetch(buildUrl("/wp-json/tong-mon/v1/claim-boss-reward"), {
     }
     return false;
 }
+          
 function showAttackResult(result) {
     if (!result || !result.success) return;
     let hpPercent = 0;
@@ -4945,6 +4988,7 @@ async function autoBiCanh() {
         autoBiCanhTimer = setTimeout(autoBiCanh, 15000);
     }
 }
+              
 async function receiveLuanVoReward() {
   try {const info = await fetchLvPageInfo(); if (!info.hasReward) {
       showToast("🎁 Chưa có thưởng để nhận");
@@ -5001,6 +5045,7 @@ async function getFriendsList() {
         return [];
     }
 }
+      
 const ACTIVITY_API = buildUrl("/wp-admin/admin-ajax.php");
 async function claimActivityReward(stage) {
   try {
@@ -5100,6 +5145,7 @@ async function getBiCanhInfo(){
         message: d.message
       };
     }
+        
     return null;
   }catch(e){
     console.error("Lỗi API Bí Cảnh:", e);
@@ -5240,6 +5286,7 @@ async function getBHDProgress(){
       .map(k=>renderRow(k, progress[k] || 0))
       .join("");
 
+
     /* ===============================
        6️⃣ TOAST UI
     ================================ */
@@ -5280,6 +5327,7 @@ async function getBHDProgress(){
     showToast("❌ Lỗi lấy tiến độ mới");
   }
 }
+      
 [toggleTL,toggleBC,toggleTD,togglePL,toggleHV].forEach(t=>t.checked=!1);["thiluyenToggle","biCanhToggle","tienDoToggle","phucloiToggle","hoangvucToggle"].forEach(k=>localStorage.setItem(k,"off"));
 toggleTL.onchange=()=>{const on=toggleTL.checked;localStorage.setItem("thiluyenToggle",on?"on":"off");if(on)autoThiLuyenSilent();else{localStorage.removeItem("nextRun_TL");stopAutoThiLuyen("🛑 Auto Thí Luyện đã tắt.")}};
 toggleBC.onchange = () => {const on = toggleBC.checked;localStorage.setItem("biCanhToggle", on ? "on" : "off");if (on) {showToast("Bí Cảnh đang được thực hiện...");autoBiCanh();} else {localStorage.removeItem("nextRun_BC");showToast("Đã tắt Bí Cảnh");}};
@@ -5333,6 +5381,7 @@ toggleHV.onchange=()=>{const on=toggleHV.checked;localStorage.setItem("hoangvucT
         target.textContent = `${data.bat_quai_tran_do_count}/8`;
         BATQUAI_FIXED = true;
     }
+          
     // HANDLER DATA
     function handleMineData(data) {
         LAST_MINE_DATA = data;
@@ -5359,7 +5408,8 @@ toggleHV.onchange=()=>{const on=toggleHV.checked;localStorage.setItem("hoangvucT
                 ) {
                     const json = JSON.parse(this.responseText);
                     if (json?.success && json?.data) { handleMineData(json.data);
-                    }
+    
+}
                 } } catch (e) {console.error('[HH3D] parse error', e); } });return _send.apply(this, arguments);};
 (function () {
   const STYLE_ID = "khoang-fix-10-style";
@@ -5403,6 +5453,7 @@ function ensureButton() {
   cursor: pointer;font-size: 12px;font-weight: 500;letter-spacing: .4px;
   transition: all .25s ease;
 `;
+      
   btn.onmouseenter = () => {
     btn.style.background = "rgba(255,77,79,0.1)";
     btn.style.boxShadow = "0 0 10px rgba(255,77,79,.8)";
@@ -5483,6 +5534,7 @@ if (mMine?.[1]) {
     };
   }
 //  HOOK XHR
+        
 (function () {
   const origOpen = XMLHttpRequest.prototype.open;
   const origSend = XMLHttpRequest.prototype.send;
@@ -5554,6 +5606,7 @@ async function attackUserInMine(attackToken, mineId) {
   fd.append("security", security);
   fd.append("security_token", token);
 
+      
   const res = await fetch(API_URL, {
     method: "POST",
     credentials: "include",
@@ -5574,6 +5627,7 @@ async function attackUserInMine(attackToken, mineId) {
   }
 
   return res;
+            
 }
   window.attackUserInMine = attackUserInMine;
 function createFastAttackBtn(row) {
@@ -5693,7 +5747,8 @@ function createFastAttackBtn(row) {
       btn.style.pointerEvents = "auto";
     }
   };
- 
+
+        
   if (!document.getElementById("ak-spin-style")) {
     const style = document.createElement("style");
     style.id = "ak-spin-style";
@@ -5790,6 +5845,7 @@ const enemies = users
       const match = u.time_spent.match(/\d+/);
       minutes = match ? parseInt(match[0]) : 9999;
     }
+    
     return {
       ...u,
       tongName,
@@ -5856,6 +5912,7 @@ window.buyAttackTurn = buyAttackTurn;
   const match = link.getAttribute("href").match(/\/profile\/(\d+)/);
   return match ? parseInt(match[1]) : null;
 }
+        
 function showEnemyPopup(list) {
   document.getElementById("ak-enemy-popup")?.remove();
   const overlay = document.createElement("div");
@@ -5913,6 +5970,7 @@ row.querySelectorAll("a").forEach(a => {
     e.stopPropagation();
   });
 });
+
     row.onclick = () => {
       if (selected.has(user.id)) {
         selected.delete(user.id);
@@ -5980,6 +6038,7 @@ if (selectedIds.length >= 2) {
       }
       await new Promise(r => setTimeout(r, 200));
     }
+          
     attackBtn.textContent = "Xong";
     attackBtn.disabled = false;
     setTimeout(() => overlay.remove(), 400);
@@ -6102,6 +6161,7 @@ async function checkUpdate() {
         console.log("Không check được update");
     }
 }
+            
 function showToast(message, showButton = false) {
     const toast = document.createElement("div");
     toast.style.position = "fixed";
@@ -6181,6 +6241,7 @@ url:DATA_URL,
 
 onload:function(res){
 
+   
 try{
 
 TUVI_DATA = JSON.parse(res.responseText);
@@ -6259,6 +6320,7 @@ const name=row.querySelector(".user-name");
 
 if(!name) return;
 
+      
 
 const rate = calcWinRate(tuvi);
 
