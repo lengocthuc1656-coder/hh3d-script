@@ -4087,6 +4087,29 @@ const sec = parseInt(m[2]);
 return (min*60+sec);
 
 }
+      async function takeoverMine(mineId) {
+  const security = await getSecurity("change_mine_owner");
+  await sleep(600);
+  const fd = new FormData();
+  fd.append("action", "change_mine_owner");
+  fd.append("mine_id", mineId);
+  fd.append("security", security);
+  const res = await fetch(API_URL, {
+    method: "POST",
+    credentials: "include",
+    body: fd
+  }).then(r => r.json());
+  const msg =
+    res?.message ||
+    res?.data?.message ||
+    "Đoạt mỏ thất bại";
+  if (res?.success) {
+    akLog(`🗡 ${msg}`);
+  } else {
+    akLog(`❌ ${msg}`);
+  }
+  return res;
+}
 async function attackUserInMine(targetUserId, mineId) {
 const { security, token } = await getSecurityBundle("attack_user_in_mine");
 await sleep(300);
