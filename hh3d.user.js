@@ -4704,7 +4704,7 @@ async function startAuto() {
 
       }
 
-  // ===== TAKEOVER 30-80 =====
+// ===== TAKEOVER 30-80 =====
 
 if (
   AK.enableTakeover &&
@@ -4732,10 +4732,10 @@ if (
 
   akLog(`📊 Bonus sau đoạt: ${bonus}%`);
 
-  // chỉ dùng phù nếu vẫn thấp
-  if (AK.enableLinhQuang && bonus < bonusMin && bonus !== 20) {
+  // nếu vẫn chưa đủ thưởng → mua phù
+  if (bonus < bonusMin && bonus !== 20) {
 
-    akLog("🧿 Dùng Linh Quang Phù");
+    akLog("🧿 Mua Linh Quang Phù");
 
     await callWithRetry(buyLingQuangPhu);
 
@@ -4754,7 +4754,6 @@ if (
   }
 
 }
-
       // ===== FARM 110 =====
 
 if (AK.enableTake110 && bonus < 110 && bonus !== 20) {
