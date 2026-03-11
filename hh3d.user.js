@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HH3D
 // @namespace    https://github.com/hoathinh3d173820-coder
-// @version      5.5
+// @version      5.6
 // @description  Script HH3D
 // @match        *://*/*
 // @grant        GM_addStyle
@@ -4163,6 +4163,7 @@ function showKhoangPopup() {
   <button data-type="copper">Hạ</button>
   <button id="akAttack" class="ak-toggle">⚔ Đánh dọn mỏ </button>
  <button id="akTakeover" class="ak-toggle"> Tự mua phù Đoạt mỏ</button>
+ <button id="akTake110" class="ak-toggle">💰 110%</button>
 </div>
 <div class="ak-bad-header">
   <span>🚫 Danh sách né đánh</span>
@@ -4171,6 +4172,7 @@ function showKhoangPopup() {
     <button id="akBadAdd" title="Thêm">➕</button>
     <button id="akBuyBatQuai" title="Mua Bát Quái">Mua BQ</button>
       <button id="akBuyAnThan" title="Mua Ẩn Thân">Mua AT</button>
+      <button id="akBuyLinhQuang" title="Mua Linh Quang Phù">Mua LQP</button>
   </div>
 
   <div id="akBadList" class="ak-bad-list">Chưa có</div>
@@ -4253,6 +4255,27 @@ takeoverBtn.onclick = () => {
     AK.enableTakeover? "🧿 Bật mua phù + đoạt mỏ khi ko đủ % thưởng": "⛔ Tắt mua phù + đoạt mỏ"
   );};
 const attackBtn = popup.querySelector("#akAttack");
+    const take110Btn = popup.querySelector("#akTake110");
+
+AK.enableTake110 = localStorage.getItem("AK_TAKE_110") === "1";
+
+if (AK.enableTake110) take110Btn.classList.add("active");
+
+take110Btn.onclick = () => {
+
+  AK.enableTake110 = !AK.enableTake110;
+
+  take110Btn.classList.toggle("active", AK.enableTake110);
+
+  localStorage.setItem("AK_TAKE_110", AK.enableTake110 ? "1" : "0");
+
+  akLog(
+    AK.enableTake110
+      ? "💰 Bật auto đoạt mỏ ăn 110%"
+      : "⛔ Tắt auto đoạt mỏ 110%"
+  );
+
+};
 AK.enableAttack = localStorage.getItem(STORAGE_ATTACK) === "1";
 if (AK.enableAttack) attackBtn.classList.add("active");
 attackBtn.onclick = () => {
@@ -4305,21 +4328,37 @@ background:#3b2450;}.ak-tabs .ak-toggle.active{background:#7c3aed;border-color:#
 .ak-bad-chip span{font-size:12px;}
 .ak-bad-chip button{background:transparent;border:none;color:#f87171;cursor:pointer;font-size:12px;padding:0;line-height:1;}
 .ak-bad-chip button:hover{ color:#ffaaaa;}
-#akBuyBatQuai, #akBuyAnThan{background:#1b2230;border:1px solid #2b3445; color:#caa7ff;border-radius:4px;cursor:pointer;padding:2px 6px;}
+#akBuyBatQuai,
+#akBuyAnThan,
+#akBuyLinhQuang{
+background:#1b2230;
+border:1px solid #2b3445;
+color:#caa7ff;
+border-radius:4px;
+cursor:pointer;
+padding:2px 6px;
+}
+
 #akBuyBatQuai.active,
-#akBuyAnThan.active{
+#akBuyAnThan.active,
+#akBuyLinhQuang.active{
 background:#7c3aed;
 color:#fff;
 border-color:#7c3aed;
 box-shadow:0 0 8px rgba(124,58,237,.6);
 }
 
-#akBuyBatQuai:hover, #akBuyAnThan:hover{background:#263149;}`);
+#akBuyBatQuai:hover,
+#akBuyAnThan:hover,
+#akBuyLinhQuang:hover{
+background:#263149;
+}`);
 // ================== EVENTS ==================
 const badAddBtn = popup.querySelector("#akBadAdd");
 const badInput = popup.querySelector("#akBadInput");
 const buyBQBtn = popup.querySelector("#akBuyBatQuai");
 const buyAnThanBtn = popup.querySelector("#akBuyAnThan");
+const buyLQPBtn = popup.querySelector("#akBuyLinhQuang");
 buyBQBtn.onclick = ()=>{
 
 AK.enableBatQuai = !AK.enableBatQuai;
@@ -4359,6 +4398,27 @@ buyAnThan();
 akLog("⛔ Tắt auto Ẩn Thân");
 
 clearTimeout(AK.atTimer);
+
+}
+
+};
+    buyLQPBtn.onclick = ()=>{
+
+AK.enableLinhQuang = !AK.enableLinhQuang;
+
+buyLQPBtn.classList.toggle("active",AK.enableLinhQuang);
+
+if(AK.enableLinhQuang){
+
+akLog("🧿 Bật auto Linh Quang Phù");
+
+buyLingQuangPhu();
+
+}else{
+
+akLog("⛔ Tắt auto Linh Quang Phù");
+
+clearTimeout(AK.lqpTimer);
 
 }
 
@@ -4502,277 +4562,257 @@ function removeBadEnemy(id) {
 }
 async function startAuto() {
   if (AK.running) return;
+
   AK.running = true;
   document.getElementById("akStart")?.classList.add("active");
   document.getElementById("akStop")?.classList.remove("active");
-const minInput = document.getElementById("akCheckMin");
-const minutes = +minInput.value;
-AK.checkMinutes = minutes > 0 ? minutes : 5;
-localStorage.setItem(STORAGE_CHECK_MIN, AK.checkMinutes);
+
+  const minInput = document.getElementById("akCheckMin");
+  const minutes = +minInput.value;
+  AK.checkMinutes = minutes > 0 ? minutes : 5;
+
+  localStorage.setItem(STORAGE_CHECK_MIN, AK.checkMinutes);
+
   akLog("▶ START auto");
+
   function gotoNextLoop(delayMin = AK.checkMinutes) {
     if (!AK.running) return;
     clearTimeout(AK.timer);
-    AK.timer = setTimeout(loop, delayMin * 60 * 1000);
+    AK.timer = setTimeout(loop, delayMin * 60000);
   }
+
   const loop = async () => {
     if (!AK.running) return;
+
     try {
+
       akLog("🔍 Check mỏ...");
       await sleep(500);
-   const res = await callWithRetry(
-  getUsersInMine,
-  [AK.selectedMineId]
-);
-if (!res?.success) {
-  akLog("⚠ Không lấy được dữ liệu mỏ → vẫn tiếp tục vòng sau");
-  return gotoNextLoop();
-}
-      // ===== INFO =====
-      const info = res.data || {};
-      const bonus = info.bonus_percentage ?? 0;
-      const bonusMin = +localStorage.getItem(STORAGE_BONUS_MIN) || 100;
-      akLog(`ℹ Bonus hiện tại: ${bonus}%`);
-let finishedCombat = false;
-let didAttackSomething = false;
-let abortCombat = false;
-// ===== AUTO ĐÁNH =====
-if (AK.enableAttack && Array.isArray(info.users)) {
-const badIds = getBadEnemies();
-const enemies = info.users.filter(
-  u =>
-    u.id &&
-    !badIds.includes(String(u.id)) &&
-    u.lien_minh === false &&
-    u.dong_mon === false
-);
 
-if (abortCombat || !AK.enableAttack || !AK.running) {
-  akLog("⛔ Đã tắt auto đánh → bỏ qua combat vòng này");
-  gotoNextLoop();
-  return;
-}
-  if (enemies.length > 15) {
-    akLog(`⚠ ${enemies.length} địch → quá đông, bỏ đánh`);
-    return gotoNextLoop();
-  }
-  if (enemies.length === 0) {
-    akLog("✅ Không còn địch hợp lệ → bỏ đánh");
-    finishedCombat = true;
-  }
-  if (!finishedCombat) {
-    akLog(`⚔ Phát hiện ${enemies.length} địch → bắt đầu đánh`);
- for (const enemy of enemies) {
-  if (!AK.running) break;
-  let loseCount = 0;
-while (AK.running) {
-  // ⚔ ĐÁNH NGAY
-  let atk = await callWithRetry(
-    attackUserInMine,
-    [enemy.id, AK.selectedMineId]
-  );
-  didAttackSomething = true;
-  const msg = atk?.message || atk?.data?.message || "";
-  // 🚨 DÍNH RATE LIMIT / PHONG ẤN
-  if (
-    msg.includes("thao tác quá nhanh") ||
-    msg.includes("phong ấn")
-  ) {
-    akLog("🚫 Bị giới hạn thao tác / phong ấn → DỪNG AUTO NGAY");
-    stopAuto();
-    return;
-  }
+      const res = await callWithRetry(
+        getUsersInMine,
+        [AK.selectedMineId]
+      );
 
-  // 🚫 HẾT LƯỢT ĐÁNH
-  if (
-    atk?.success === false &&
-    msg.includes("giới hạn tấn công")
-  ) {
-    akLog("🔄 Hết lượt đánh → refresh");
-    const ref = await callWithRetry(refreshAttackCount);
-    const refMsg = ref?.message || ref?.data?.message || "";
-    if (!ref?.success) {
-      if (refMsg.includes("giới hạn làm mới")) {
-        akLog("⛔ Tắt auto đánh để ngưng");
-        AK.enableAttack = false;
-        localStorage.setItem(STORAGE_ATTACK, "0");
-        document.getElementById("akAttack")?.classList.remove("active");
-        abortCombat = true;
-        finishedCombat = true;
-        break; // thoát while
+      if (!res?.success) {
+        akLog("⚠ Không lấy được dữ liệu mỏ");
+        return gotoNextLoop();
+      }
+
+      let info = res.data || {};
+      let bonus = info.bonus_percentage ?? 0;
+      const bonusMin =
+        +localStorage.getItem(STORAGE_BONUS_MIN) || 100;
+
+      akLog(`💰 Bonus hiện tại: ${bonus}%`);
+
+      // ===== AUTO ĐÁNH =====
+
+      if (AK.enableAttack && Array.isArray(info.users)) {
+
+        const badIds = getBadEnemies();
+
+        const enemies = info.users.filter(
+          u =>
+            u.id &&
+            !badIds.includes(String(u.id)) &&
+            !u.lien_minh &&
+            !u.dong_mon
+        );
+
+        if (enemies.length > 0 && enemies.length <= 15) {
+
+          akLog(`⚔ ${enemies.length} địch → bắt đầu đánh`);
+
+          for (const enemy of enemies) {
+
+            if (!AK.running) break;
+
+            let atk = await callWithRetry(
+              attackUserInMine,
+              [enemy.id, AK.selectedMineId]
+            );
+
+            const msg =
+              atk?.message || atk?.data?.message || "";
+
+            if (
+              msg.includes("thao tác quá nhanh") ||
+              msg.includes("phong ấn")
+            ) {
+              akLog("🚫 Bị giới hạn thao tác → dừng auto");
+              stopAuto();
+              return;
+            }
+
+            if (atk?.data?.result === "lose") {
+              akLog(`❌ Thua → né ID ${enemy.id}`);
+              addBadEnemy(enemy.id);
+              renderBadEnemyList();
+              continue;
+            }
+
+            await sleep(ATTACK_COOLDOWN);
+
+          }
+
+        }
+
+      }
+
+      // ===== REFRESH MỎ =====
+
+      const re = await callWithRetry(
+        getUsersInMine,
+        [AK.selectedMineId]
+      );
+
+      if (re?.success) {
+        info = re.data || {};
+        bonus = info.bonus_percentage ?? 0;
+      }
+
+      const inMine = info.is_in_mine === true;
+
+      // ===== CHƯA NGỒI MỎ =====
+
+      if (!inMine) {
+
+        akLog("🟢 Chưa ngồi mỏ → vào mỏ");
+
+        const enter = await callWithRetry(
+          enterMine,
+          [AK.selectedMineId]
+        );
+
+        if (!enter?.success) {
+
+          const msg =
+            enter?.message ||
+            enter?.data?.message ||
+            "";
+
+          if (msg.includes("đạt đủ thưởng")) {
+            akLog("🛑 Hết lượt ngày → dừng");
+            stopAuto();
+            return;
+          }
+
+        }
+
+        return gotoNextLoop();
+
+      }
+
+      // ===== TAKEOVER 30-80 =====
+
+      if (
+        AK.enableTakeover &&
+        bonus >= 30 &&
+        bonus <= 80
+      ) {
+
+        akLog("🗡 Bonus 30-80 → đoạt mỏ");
+
+        await callWithRetry(
+          takeoverMine,
+          [AK.selectedMineId]
+        );
+
+        await sleep(1200);
+
+        await callWithRetry(buyLingQuangPhu);
+
+        await sleep(1200);
+
+      }
+
+      // ===== FARM 110 =====
+
+      if (AK.enableTake110 && bonus < 110) {
+
+        akLog("🗡 Thử đoạt mỏ");
+
+        await callWithRetry(
+          takeoverMine,
+          [AK.selectedMineId]
+        );
+
+        await sleep(1200);
+
+        const re2 = await callWithRetry(
+          getUsersInMine,
+          [AK.selectedMineId]
+        );
+
+        if (re2?.success)
+          bonus = re2.data?.bonus_percentage ?? 0;
+
+        akLog(`📊 Bonus sau đoạt: ${bonus}%`);
+
+      }
+
+      if (bonus < 110 && bonus !== 20) {
+
+        akLog("🧿 Dùng Linh Quang Phù");
+
+        await callWithRetry(buyLingQuangPhu);
+
+        await sleep(1200);
+
+        const re3 = await callWithRetry(
+          getUsersInMine,
+          [AK.selectedMineId]
+        );
+
+        if (re3?.success)
+          bonus = re3.data?.bonus_percentage ?? 0;
+
+        akLog(`✨ Bonus sau phù: ${bonus}%`);
+
+      }
+
+      // ===== CLAIM =====
+
+      if (bonus >= bonusMin) {
+
+        akLog("🎁 Nhận thưởng");
+
+        const claim = await callWithRetry(
+          claimReward,
+          [AK.selectedMineId]
+        );
+
+        if (!claim?.success) {
+
+          const msg = claim?.message || "";
+
+          if (msg.includes("đạt đủ thưởng")) {
+            akLog("🛑 Hết lượt ngày → dừng");
+            stopAuto();
+            return;
+          }
+
+        }
+
       } else {
-        akLog("🛑 Không refresh được lượt → dừng đánh");
-        abortCombat = true;
-        finishedCombat = true;
-        break;
+
+        akLog(`⏳ Chưa đủ bonus (${bonus}%/${bonusMin}%)`);
+
       }
-    }
-    // ⏳ CHỜ 5.5s RỒI ĐÁNH TIẾP
-    akLog("⏳ Chờ 5s rồi đánh tiếp...");
-    await sleep(ATTACK_COOLDOWN);
-    continue;
-  }
-  // ❌ THUA
-  if (
-    atk?.data?.result === "lose" ||
-    msg.includes("thiếu chút nữa")
-  ) {
-    loseCount++;
-    akLog(`❌ Thua ${loseCount}/3 với ID ${enemy.id}`);
-    if (loseCount >= 3) {
-      akLog(`🚫 Thua 3 lần → thêm vào danh sách né: ${enemy.id}`);
-      addBadEnemy(enemy.id);
-      renderBadEnemyList();
-      break; // bỏ thằng này
-    }
-    // ⏳ CHỜ 5.5s RỒI ĐÁNH LẠI
-    akLog("⏳ Chờ cooldown rồi đánh lại...");
-    await sleep(ATTACK_COOLDOWN);
-    continue;
-  }
-  // ✅ THẮNG hoặc case khác → thoát để refresh mỏ
-  break;
-}
-if (abortCombat) break; // 🔴 thoát luôn vòng for enemies
-// sau khi xử lý xong 1 enemy → chờ rồi check lại mỏ
-await sleep(ATTACK_COOLDOWN);
-  const re = await getUsersInMine(AK.selectedMineId);
-  if (!re?.success) break;
-  const info2 = re.data || {};
-  const bonus2 = info2.bonus_percentage ?? 0;
-  if (bonus2 >= 100) {
-    akLog("🎯 Bonus đã 100% → ngưng đánh");
-    finishedCombat = true;
-    break;
-  }
-  const remainEnemies = (info2.users || []).filter(
-    u =>
-      u.id &&
-      !badIds.includes(String(u.id)) &&
-      u.lien_minh === false &&
-      u.dong_mon === false
-  );
-  if (remainEnemies.length === 0) {
-    akLog("✅ Hết địch trong mỏ");
-    finishedCombat = true;
-    break;
-  }
-}
-  }
-}
-   // ===== REFRESH TRẠNG THÁI TRƯỚC KHI XỬ LÝ =====
-let curInfo = info;
-let curBonus = bonus;
-let curInMine = isMeInMine(info);
-// nếu có đánh hoặc bonus gần ngưỡng → refresh
-if (AK.enableAttack || bonus >= bonusMin - 5) {
-  akLog("🔄 Refresh mỏ trước khi xử lý...");
-  const re = await getUsersInMine(AK.selectedMineId);
-  if (re?.success) {
-    curInfo = re.data || {};
-    curBonus = curInfo.bonus_percentage ?? 0;
-    curInMine = curInfo.is_in_mine === true;
-    akLog(`ℹ Bonus cập nhật: ${curBonus}%`);
-  }
-}
-// ===== ĐANG NGỒI MỎ =====
-if (curInMine) {
 
-  const TAKE_MIN = 30;
-  const TAKE_MAX = 80;
+    } catch (e) {
 
-  // 🔄 Check lại mỏ lần nữa cho chắc
-  const check = await callWithRetry(
-    getUsersInMine,
-    [AK.selectedMineId]
-  );
-
-  if (!check?.success) {
-    akLog("⚠ Không check được mỏ");
-    return gotoNextLoop();
-  }
-
-  let bonusNow = check.data?.bonus_percentage ?? 0;
-  let meInMine = isMeInMine(check.data);
-
-  akLog(`📊 Bonus hiện tại: ${bonusNow}%`);
-
-  // ===== NẰM TRONG VÙNG 30-80% =====
-  if (
-
-    AK.enableTakeover &&
-    bonusNow >= TAKE_MIN &&
-    bonusNow <= TAKE_MAX
-  ) {
-// 🗡 LUÔN ĐOẠT TRƯỚC (nếu bật takeover)
-akLog("🗡 Trong vùng xử lý → đoạt mỏ");
-const tk = await callWithRetry(
-  takeoverMine,
-  [AK.selectedMineId]
-);
-if (tk?.success) {
-  await sleep(1200);
-}
-    // 🧿 MUA BÙA SAU
-    akLog("🧿 Mua Linh Quang Phù");
-    await callWithRetry(buyLingQuangPhu);
-    await sleep(1200);
-    // 🔄 CHECK LẠI BONUS
-    const re = await callWithRetry(
-      getUsersInMine,
-      [AK.selectedMineId]
-    );
-    if (!re?.success) return gotoNextLoop();
-    bonusNow = re.data?.bonus_percentage ?? 0;
-    akLog(`✨ Bonus sau xử lý: ${bonusNow}%`);
-  }
-
-  // ===== CLAIM CUỐI =====
-  if (bonusNow >= bonusMin) {
-    akLog("🎁 Đủ bonus → nhận thưởng");
-    const claim = await callWithRetry(
-      claimReward,
-      [AK.selectedMineId]
-    );
-    if (!claim?.success) {
-      const msg = claim?.message || "";
-      if (msg.includes("đạt đủ thưởng")) {
-        akLog("🛑 Hết lượt ngày → dừng auto");
-        stopAuto();
-        return;
-      }
-    }
-  } else {
-    akLog(`⏳ Chưa đủ bonus (${bonusNow}%/${bonusMin}%)`);
-  }
-  return gotoNextLoop();
-}
-// ===== CHƯA NGỒI MỎ =====
-else {
-  akLog("🟢 Chưa ngồi mỏ → vào mỏ ngay");
-  const enter = await callWithRetry(
-    enterMine,
-    [AK.selectedMineId]
-  );
-
-  // enterMine đã tự log → chỉ xử lý case đặc biệt
-  if (!enter?.success) {
-    const msg = enter?.message || enter?.data?.message || "";
-    if (msg.includes("đạt đủ thưởng")) {
-      akLog("🛑 Hết lượt ngày → dừng auto");
-      stopAuto();
-      return;
-    }
-    akLog("⚠️ Vào mỏ thất bại → thử lại vòng sau");
-  }
-} } catch (e) {
       akLog("❌ Lỗi auto: " + e.message);
+
     }
-    AK.timer = setTimeout(loop, AK.checkMinutes * 60 * 1000);
+
+    gotoNextLoop();
+
   };
+
   loop();
 }
-
 function stopAuto() {
   AK.running = false;
   clearTimeout(AK.timer);
@@ -4780,6 +4820,7 @@ function stopAuto() {
   document.getElementById("akStop")?.classList.add("active");
   akLog("⏹ STOP auto");
 }
+                                     
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 // == AUTO THÍ LUYỆN  ==
 const TL_API = "/wp-content/themes/halimmovies-child/hh3d-ajax.php";
@@ -4880,6 +4921,7 @@ else {
     "warning"
   );
 }
+        
       const nextToken = await getSecurityToken(location.href);
       if (!nextToken) {
         stopAutoThiLuyen("❌ Không lấy được token sau khi mở");
@@ -5017,6 +5059,7 @@ function showAttackResult(result) {
     if (result.message) {
         parts.push(result.message);
     }
+ 
     if (result.boss_hp && result.boss_max_hp) {
         parts.push(`👹 ${result.boss_hp}/${result.boss_max_hp} (${hpPercent.toFixed(1)}%)`);
     }
@@ -5205,6 +5248,7 @@ async function claimActivityReward(stage) {
         security_token: securityToken
       })
     });
+              
     const data = await resp.json();
     if (data?.data?.message) {
       showToast(` ${data.data.message}`);
@@ -5601,6 +5645,7 @@ function ensureButton() {
     btn.style.background = "transparent";
     btn.style.boxShadow = "0 0 6px rgba(255,77,79,.4)";
   };
+          
   let on = false;
   btn.onclick = function () {
     on = !on;
@@ -5911,6 +5956,7 @@ function createFastAttackBtn(row) {
       <path d="M21 20l-5.6-5.6a7 7 0 10-1.4 1.4L20 21zM5 10a5 5 0 1110 0A5 5 0 015 10z"/>
     </svg>
   `;
+     
   btn.innerHTML = filterIcon;
   btn.style.cssText = `
     position:absolute;top:1.5px;left:48px;
@@ -6363,6 +6409,7 @@ const txt=el.innerText;
 
 const num=txt.replace(/\D/g,"");
 
+        
 MY_TUVI=parseInt(num);
 
 console.log("Tu Vi bản thân:",MY_TUVI);
@@ -6487,6 +6534,7 @@ loadData();
 setInterval(inject,1000);
 
 
+ 
 })();
 })();
 })();
